@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Treasure Code Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;800&display=swap">
+<style>
+/* Layout: one column of lessons, the play area is a two-pane board + code bench that stacks on phones */
+:root{
+  --paper:#EEF3F8; --card:#FFFFFF; --ink:#1C2433; --muted:#566178; --line:#D3DCE7;
+  --teal:#3BA3B4; --teal-dk:#2A8696; --magenta:#D2337F; --gem:#8A55E6; --sun:#F2AE2E;
+  --ok:#1F9D63; --bad:#D9483B; --cave:#2B3343; --veil:rgba(255,255,255,.25);
+  --display:"Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Nunito", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#141A24; --card:#1D2533; --ink:#E9EEF6; --muted:#A3AEC2; --line:#323D50; --ok:#43C487; --bad:#F06B5E; --veil:rgba(20,26,36,.35); color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#141A24; --card:#1D2533; --ink:#E9EEF6; --muted:#A3AEC2; --line:#323D50; --ok:#43C487; --bad:#F06B5E; --veil:rgba(20,26,36,.35); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:clamp(2.1rem,6vw,3.2rem);font-weight:800}
+h2{font-size:1.75rem;font-weight:800}
+h3{font-size:1.2rem;font-weight:600}
+p{margin:0}
+.eyebrow{font-size:.8rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-direction:column;gap:10px}
+header p{max-width:62ch;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:16px}
+
+/* block look, matching the test sheet colors */
+.blk{display:inline-flex;align-items:center;gap:6px;font-family:var(--body);font-weight:800;font-size:.95rem;color:#fff;background:var(--teal);border-radius:8px 8px 8px 8px;padding:6px 12px;border:0;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);white-space:nowrap}
+.blk.rep{background:var(--magenta)}
+.blk .pill{background:rgba(255,255,255,.9);color:#1C2433;border-radius:6px;padding:0 6px;font-size:.85rem}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card p{font-size:.95rem;color:var(--muted)}
+
+/* game */
+.game{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.game{grid-template-columns:1fr}}
+.boardside{display:flex;flex-direction:column;gap:12px}
+.levels{display:flex;flex-wrap:wrap;gap:8px}
+.levels button{font-family:var(--body);font-weight:800;font-size:.9rem;padding:6px 12px;border-radius:999px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.levels button[aria-pressed="true"]{border-color:var(--gem);background:var(--gem);color:#fff}
+.levels .star{color:var(--sun)}
+canvas{width:100%;max-width:420px;aspect-ratio:1;border-radius:14px;display:block;background:var(--cave)}
+.goal{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:.95rem}
+.goal b{font-family:var(--display);font-size:1.05rem}
+
+.bench{display:flex;flex-direction:column;gap:12px;min-width:0}
+.palette{display:flex;flex-wrap:wrap;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.palette .blk{cursor:pointer;font-size:1rem;padding:8px 14px}
+.palette .blk:hover{filter:brightness(1.08)}
+.palette .blk:active{transform:translateY(1px)}
+.ws{background:var(--card);border:2px dashed var(--line);border-radius:12px;padding:12px;min-height:220px;display:flex;flex-direction:column;gap:6px;cursor:pointer}
+.ws.target{border-color:var(--teal)}
+.ws-label{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);font-weight:800}
+.list{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.item{display:flex;flex-direction:column;align-items:flex-start;gap:0}
+.item>.blk{padding-right:6px}
+.x{border:0;background:rgba(0,0,0,.2);color:#fff;border-radius:6px;width:22px;height:22px;font-weight:800;cursor:pointer;line-height:1}
+.x:hover{background:rgba(0,0,0,.35)}
+.repbox{background:var(--magenta);border-radius:8px;padding:6px 6px 8px 10px;color:#fff;font-weight:800;display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
+.repbox .head{display:flex;align-items:center;gap:6px}
+.repbox select{font-family:var(--body);font-weight:800;border-radius:6px;border:0;padding:1px 4px}
+.slot{background:var(--card);border-radius:6px;min-height:38px;min-width:150px;padding:6px;display:flex;flex-direction:column;gap:5px;border:2px dashed transparent;cursor:pointer}
+.slot.target{border-color:var(--sun)}
+.slot .empty,.ws .empty{color:var(--muted);font-weight:600;font-size:.85rem}
+.running>.blk,.running.repbox{outline:3px solid var(--sun);outline-offset:2px}
+.controls{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font-family:var(--display);font-weight:800;font-size:1.05rem;border-radius:10px;padding:8px 18px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.go{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:focus-visible,.blk:focus-visible,.levels button:focus-visible,.x:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.msg{border-radius:12px;padding:12px 14px;font-weight:700;background:var(--card);border:1px solid var(--line)}
+.msg.ok{border-color:var(--ok);color:var(--ok)}
+.msg.bad{border-color:var(--bad);color:var(--bad)}
+.stats{font-size:.9rem;color:var(--muted);font-weight:700}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+summary{cursor:pointer;font-weight:800}
+details .sol{display:flex;flex-direction:column;gap:5px;align-items:flex-start;margin-top:10px}
+details .indent{margin-left:24px;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+
+/* rubric */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.92rem}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-size:1rem}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:800;white-space:nowrap}
+.check{display:flex;flex-direction:column;gap:8px}
+.check label{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--ok)}
+.sched{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.sched div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.sched b{font-family:var(--display);font-size:1.15rem;display:block}
+.sched span{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+.note{font-size:.85rem;color:var(--muted)}
+a{color:var(--gem);font-weight:800}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Computing · Primary 1 · Practical Test 2</span>
+    <h1>Treasure Code Practice</h1>
+    <p>Help Laurel the Adventurer collect every purple gem. Build a program with blocks, press Run, and fix it if something goes wrong. Level 3 is the same puzzle as the test picture.</p>
+  </header>
+
+  <section aria-labelledby="blocks-h">
+    <h2 id="blocks-h">Meet the 5 blocks</h2>
+    <div class="cards">
+      <div class="card"><span class="blk">move <span class="pill">forward</span></span><p>Laurel walks one square the way she is facing.</p></div>
+      <div class="card"><span class="blk">turn <span class="pill">right ↻</span></span><p>Laurel turns to her right. She stays on the same square.</p></div>
+      <div class="card"><span class="blk">turn <span class="pill">left ↺</span></span><p>Laurel turns to her left. She stays on the same square.</p></div>
+      <div class="card"><span class="blk">collect</span><p>Picks up the gem. Use it only when Laurel is standing on a gem.</p></div>
+      <div class="card"><span class="blk rep">repeat <span class="pill">4</span> times</span><p>Does the blocks inside it again and again. It makes your code shorter.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="play-h">
+    <h2 id="play-h">Play</h2>
+    <div class="game">
+      <div class="boardside">
+        <div class="levels" id="levels" role="group" aria-label="Choose a level"></div>
+        <canvas id="board" width="420" height="420" aria-label="Game board"></canvas>
+        <div class="goal" id="goal"></div>
+      </div>
+      <div class="bench">
+        <div class="palette" id="palette" aria-label="Blocks. Tap a block to add it.">
+          <button class="blk" data-add="move">move <span class="pill">forward</span></button>
+          <button class="blk" data-add="right">turn <span class="pill">right ↻</span></button>
+          <button class="blk" data-add="left">turn <span class="pill">left ↺</span></button>
+          <button class="blk" data-add="collect">collect</button>
+          <button class="blk rep" data-add="repeat">repeat <span class="pill">?</span> times</button>
+        </div>
+        <div class="ws" id="ws">
+          <div class="ws-label"><span>Workspace · tap a block above to add it</span><button class="btn" id="outBtn" hidden style="font-size:.85rem;padding:4px 10px">Add below the loop</button></div>
+          <div class="list" id="mainList"></div>
+        </div>
+        <div class="controls">
+          <button class="btn go" id="runBtn">▶ Run</button>
+          <button class="btn" id="stepBtn">Step</button>
+          <button class="btn" id="resetBtn">Reset</button>
+          <button class="btn" id="clearBtn">Clear blocks</button>
+        </div>
+        <div class="stats" id="stats"></div>
+        <div class="msg" id="msg" role="status">Tap blocks to build your program, then press Run.</div>
+        <details id="hintBox"><summary>Need a hint?</summary><p id="hint" style="margin-top:8px"></p></details>
+        <details id="solBox"><summary>Show one answer</summary><div class="sol" id="sol"></div></details>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="debug-h">
+    <h2 id="debug-h">When it goes wrong: debug!</h2>
+    <div class="cards">
+      <div class="card"><h3>1. Watch</h3><p>Press Step to run one block at a time. The yellow box shows which block is working.</p></div>
+      <div class="card"><h3>2. Find</h3><p>Stop at the first block where Laurel does something wrong. Did she turn the wrong way?</p></div>
+      <div class="card"><h3>3. Fix</h3><p>Remove the wrong block with ×, add the right one, then Reset and Run again.</p></div>
+      <div class="card"><h3>4. Shorten</h3><p>See the same blocks again and again? Put them inside a repeat block.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="rubric-h">
+    <h2 id="rubric-h">How the test is scored</h2>
+    <p class="note">5 parts × 4 points = 20 points. Your score is points ÷ 20 × 100.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Part</th><th>To get 4 (Excellent)</th></tr></thead>
+        <tbody>
+          <tr><td>Directions</td><td>Use move forward, turn right and turn left in the right order, with no mistakes.</td></tr>
+          <tr><td>Collect</td><td>Put a collect block on every gem square and get all the gems.</td></tr>
+          <tr><td>Loops</td><td>Use repeat to make the code short, and stay within the block limit.</td></tr>
+          <tr><td>Debugging</td><td>Find and fix your own mistakes on the first try.</td></tr>
+          <tr><td>On your own</td><td>Follow the steps, stay focused, and finish the whole challenge by yourself.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Am I ready? Tick what you can do</h3>
+    <div class="check" id="check">
+      <label><input type="checkbox" id="c1"> I can tell which way Laurel is facing before I turn.</label>
+      <label><input type="checkbox" id="c2"> I know turn right and turn left do not move Laurel.</label>
+      <label><input type="checkbox" id="c3"> I only use collect when Laurel stands on a gem.</label>
+      <label><input type="checkbox" id="c4"> I can put blocks inside a repeat and choose the number.</label>
+      <label><input type="checkbox" id="c5"> I finished Level 3 with 6 blocks or fewer.</label>
+      <label><input type="checkbox" id="c6"> I can drag, drop and snap blocks with the mouse.</label>
+    </div>
+  </section>
+
+  <section aria-labelledby="sched-h">
+    <h2 id="sched-h">Test day</h2>
+    <div class="sched">
+      <div><b>P1-I, J</b><span>Mon 9 Nov 2026</span></div>
+      <div><b>P1-E, C</b><span>Tue 10 Nov 2026</span></div>
+      <div><b>P1-F, G, H</b><span>Wed 11 Nov 2026</span></div>
+      <div><b>P1-D</b><span>Thu 12 Nov 2026</span></div>
+      <div><b>P1-A, B</b><span>Fri 13 Nov 2026*</span></div>
+    </div>
+    <p class="note">*The test sheet says "Friday, 13 September 2026". 13 November is the Friday of test week, so please check the date with the teacher. The test runs on Code.org in the Computing Lab. Extra practice on CodeMonkey: <a href="https://bit.ly/4kuhO6c" target="_blank" rel="noopener">bit.ly/4kuhO6c</a></p>
+  </section>
+</div>
+
+<script>
+(function(){
+const DX=[1,0,-1,0], DY=[0,1,0,-1];
+const LEVELS=[
+  {name:"1 · Straight line", size:6, start:{x:0,y:3,d:0}, gems:[[1,3],[2,3],[3,3],[4,3]], rocks:[[2,1],[4,5],[5,0]], best:3,
+   goal:"Collect all 4 gems in a straight line.",
+   hint:"Laurel does the same two things 4 times: move forward, then collect. Put those two blocks inside one repeat.",
+   sol:[{t:"repeat",n:4,body:["move","collect"]}]},
+  {name:"2 · Around the corner", size:6, start:{x:0,y:5,d:0}, gems:[[3,5],[3,2]], rocks:[[4,5],[1,2],[5,3]], best:8,
+   goal:"Walk to the first gem, turn the corner, and get the second gem.",
+   hint:"Count the squares: 3 steps to the first gem. Laurel faces right, so to go up she must turn left.",
+   sol:[{t:"repeat",n:3,body:["move"]},"collect","left",{t:"repeat",n:3,body:["move"]},"collect"]},
+  {name:"3 · Gem stairs (test)", size:6, start:{x:0,y:5,d:0}, gems:[[1,5],[2,4],[3,3],[4,2]], rocks:[[0,1],[5,5],[2,0]], best:6,
+   goal:"The test puzzle. Climb the stairs and collect all 4 gems.",
+   hint:"One step of the stairs is: move forward, collect, turn left, move forward, turn right. How many steps are there?",
+   sol:[{t:"repeat",n:4,body:["move","collect","left","move","right"]}]},
+  {name:"4 · Stairs going down", size:6, start:{x:0,y:0,d:0}, gems:[[1,0],[2,1],[3,2],[4,3]], rocks:[[0,4],[5,1],[1,5]], best:6,
+   goal:"Now the stairs go down. Watch out: the turns swap!",
+   hint:"Going down means turning right first, then turning left to face forward again.",
+   sol:[{t:"repeat",n:4,body:["move","collect","right","move","left"]}]}
+];
+const LABEL={move:'move <span class="pill">forward</span>',right:'turn <span class="pill">right ↻</span>',left:'turn <span class="pill">left ↺</span>',collect:'collect'};
+
+let lv=0, uid=0, program=[], target=program, sim=null, iter=null, timer=null, running=false;
+let solved={};
+try{solved=JSON.parse(localStorage.getItem("tcp-solved")||"{}")||{};}catch(e){solved={};}
+
+const $=id=>document.getElementById(id);
+const canvas=$("board"), ctx=canvas.getContext("2d");
+function newBlock(type){const b={id:++uid,type};if(type==="repeat"){b.times=4;b.body=[];}return b;}
+function countBlocks(list){return list.reduce((n,b)=>n+1+(b.type==="repeat"?countBlocks(b.body):0),0);}
+function removeById(list,id){for(let i=0;i<list.length;i++){if(list[i].id===id){const r=list.splice(i,1)[0];return r;}if(list[i].type==="repeat"){const r=removeById(list[i].body,id);if(r)return r;}}return null;}
+function containsList(list,arr){if(list===arr)return true;return list.some(b=>b.type==="repeat"&&containsList(b.body,arr));}
+
+/* ---------- levels ---------- */
+function renderLevels(){
+  $("levels").innerHTML="";
+  LEVELS.forEach((L,i)=>{
+    const b=document.createElement("button");
+    b.setAttribute("aria-pressed",i===lv?"true":"false");
+    b.innerHTML=L.name+(solved[i]?' <span class="star">'+"★".repeat(solved[i])+"</span>":"");
+    b.onclick=()=>{if(running)return;lv=i;program.length=0;target=program;renderLevels();loadLevel();};
+    $("levels").appendChild(b);
+  });
+}
+function loadLevel(){
+  const L=LEVELS[lv];
+  $("goal").innerHTML="<b>Goal:</b> "+L.goal+" Try to use "+L.best+" blocks or fewer.";
+  $("hint").textContent=L.hint;
+  $("hintBox").open=false; $("solBox").open=false;
+  const sol=$("sol"); sol.innerHTML="";
+  L.sol.forEach(s=>{
+    if(typeof s==="string"){sol.insertAdjacentHTML("beforeend",'<span class="blk">'+LABEL[s]+"</span>");}
+    else{let h='<span class="blk rep">repeat <span class="pill">'+s.n+'</span> times</span><div class="indent">';s.body.forEach(x=>h+='<span class="blk">'+LABEL[x]+"</span>");sol.insertAdjacentHTML("beforeend",h+"</div>");}
+  });
+  reset("Tap blocks to build your program, then press Run.");
+  renderProgram();
+}
+
+/* ---------- workspace ---------- */
+function renderList(list,el){
+  el.innerHTML="";
+  if(!list.length){el.innerHTML='<span class="empty">'+(list===program?"No blocks yet":"Put blocks here")+"</span>";return;}
+  list.forEach(b=>{
+    const item=document.createElement("div");item.className="item";item.dataset.id=b.id;
+    if(b.type==="repeat"){
+      const box=document.createElement("div");box.className="repbox";box.dataset.id=b.id;
+      const head=document.createElement("div");head.className="head";
+      head.append("repeat ");
+      const sel=document.createElement("select");sel.id="times-"+b.id;sel.setAttribute("aria-label","Repeat how many times");
+      for(let n=1;n<=10;n++){const o=document.createElement("option");o.value=n;o.textContent=n;if(n===b.times)o.selected=true;sel.appendChild(o);}
+      sel.onclick=e=>e.stopPropagation();
+      sel.onchange=()=>{b.times=+sel.value;updateStats();};
+      head.appendChild(sel);head.append(" times");
+      head.appendChild(xBtn(b));
+      const doRow=document.createElement("div");doRow.style.display="flex";doRow.style.gap="6px";doRow.style.alignItems="flex-start";
+      const doLbl=document.createElement("span");doLbl.textContent="do";doLbl.style.paddingTop="8px";
+      const slot=document.createElement("div");slot.className="slot list"+(target===b.body?" target":"");
+      slot.onclick=e=>{e.stopPropagation();if(running)return;target=b.body;renderProgram();};
+      renderList(b.body,slot);
+      doRow.append(doLbl,slot);
+      box.append(head,doRow);item.appendChild(box);
+    }else{
+      const s=document.createElement("span");s.className="blk";s.innerHTML=LABEL[b.type];s.appendChild(xBtn(b));item.appendChild(s);
+    }
+    el.appendChild(item);
+  });
+}
+function xBtn(b){const x=document.createElement("button");x.className="x";x.textContent="×";x.setAttribute("aria-label","Remove block");
+  x.onclick=e=>{e.stopPropagation();if(running)return;removeById(program,b.id);if(!containsList(program,target))target=program;reset();renderProgram();};return x;}
+function renderProgram(){
+  renderList(program,$("mainList"));
+  $("ws").classList.toggle("target",target===program);
+  $("outBtn").hidden=target===program;
+  updateStats();
+}
+function updateStats(){
+  const n=countBlocks(program),L=LEVELS[lv];
+  $("stats").textContent="Blocks used: "+n+" · Goal: "+L.best+" or fewer"+(target===program?"":" · Adding inside the repeat loop");
+}
+
+$("palette").addEventListener("click",e=>{
+  const btn=e.target.closest("[data-add]");if(!btn||running)return;
+  const b=newBlock(btn.dataset.add);target.push(b);
+  if(b.type==="repeat")target=b.body;
+  reset();renderProgram();
+});
+$("ws").addEventListener("click",e=>{if(running)return;if(e.target.closest(".item"))return;target=program;renderProgram();});
+$("outBtn").onclick=e=>{e.stopPropagation();target=program;renderProgram();};
+
+/* ---------- simulation ---------- */
+function* walk(list,parents){
+  for(const b of list){
+    if(b.type==="repeat"){for(let i=0;i<b.times;i++)yield* walk(b.body,parents.concat(b.id));}
+    else yield {b,parents};
+  }
+}
+function reset(text){
+  stop();
+  const L=LEVELS[lv];
+  sim={x:L.start.x,y:L.start.y,d:L.start.d,got:new Set(),over:false,crash:false};
+  iter=null;clearHighlight();
+  if(text!==undefined)setMsg(text,"");
+  draw();
+}
+function stop(){if(timer){clearTimeout(timer);timer=null;}running=false;setButtons();}
+function setButtons(){["stepBtn","resetBtn","clearBtn"].forEach(id=>$(id).disabled=running&&id!=="resetBtn");$("runBtn").disabled=running;}
+function clearHighlight(){document.querySelectorAll(".running").forEach(el=>el.classList.remove("running"));}
+function highlight(step){
+  clearHighlight();
+  const el=document.querySelector('.item[data-id="'+step.b.id+'"]');if(el)el.classList.add("running");
+  step.parents.forEach(pid=>{const p=document.querySelector('.repbox[data-id="'+pid+'"]');if(p)p.classList.add("running");});
+}
+function setMsg(t,cls){const m=$("msg");m.textContent=t;m.className="msg"+(cls?" "+cls:"");}
+const isRock=(x,y)=>LEVELS[lv].rocks.some(r=>r[0]===x&&r[1]===y);
+const gemAt=(x,y)=>LEVELS[lv].gems.findIndex(g=>g[0]===x&&g[1]===y);
+
+function doStep(){
+  if(sim.over)return false;
+  if(!iter){if(!program.length){setMsg("Your workspace is empty. Tap a block to add it.","bad");return false;}iter=walk(program,[]);setMsg("Running…","");}
+  const nx=iter.next();
+  if(nx.done){finish();return false;}
+  const step=nx.value,L=LEVELS[lv];highlight(step);
+  switch(step.b.type){
+    case "move":{const x=sim.x+DX[sim.d],y=sim.y+DY[sim.d];
+      if(x<0||y<0||x>=L.size||y>=L.size||isRock(x,y)){sim.crash=true;sim.over=true;draw();setMsg("Bonk! Laurel hit "+(isRock(x,y)?"a rock":"the wall")+". Find the block that sent her the wrong way and fix it.","bad");return false;}
+      sim.x=x;sim.y=y;break;}
+    case "right":sim.d=(sim.d+1)%4;break;
+    case "left":sim.d=(sim.d+3)%4;break;
+    case "collect":{const g=gemAt(sim.x,sim.y);
+      if(g<0||sim.got.has(g)){sim.over=true;draw();setMsg("Oops! There is no gem on this square. Only use collect when Laurel stands on a gem.","bad");return false;}
+      sim.got.add(g);break;}
+  }
+  draw();return true;
+}
+function finish(){
+  sim.over=true;clearHighlight();
+  const L=LEVELS[lv],left=L.gems.length-sim.got.size,n=countBlocks(program);
+  if(left>0){setMsg("Laurel stopped, but "+left+" gem"+(left>1?"s are":" is")+" still waiting. Debug and try again!","bad");return;}
+  const stars=n<=L.best?3:n<=L.best+4?2:1;
+  const extra=stars===3?" Super short code!":" You used "+n+" blocks. Can you use repeat to get to "+L.best+"?";
+  setMsg("You collected all the gems! "+"★".repeat(stars)+extra,"ok");
+  if(!solved[lv]||solved[lv]<stars){solved[lv]=stars;try{localStorage.setItem("tcp-solved",JSON.stringify(solved));}catch(e){}renderLevels();}
+}
+$("runBtn").onclick=()=>{
+  if(sim.over||iter===null)reset();
+  if(!program.length){setMsg("Your workspace is empty. Tap a block to add it.","bad");return;}
+  running=true;setButtons();
+  const tick=()=>{if(doStep()&&!sim.over){timer=setTimeout(tick,520);}else{stop();}};
+  tick();
+};
+$("stepBtn").onclick=()=>{if(sim.over)reset();doStep();};
+$("resetBtn").onclick=()=>reset("Reset. Laurel is back at the start.");
+$("clearBtn").onclick=()=>{program.length=0;target=program;reset("Workspace cleared.");renderProgram();};
+
+/* ---------- drawing ---------- */
+function fitCanvas(){
+  const dpr=window.devicePixelRatio||1,w=canvas.clientWidth||420;
+  canvas.width=Math.round(w*dpr);canvas.height=Math.round(w*dpr);
+  draw();
+}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function draw(){
+  if(!sim)return;
+  const L=LEVELS[lv],W=canvas.width,pad=W*0.06,s=(W-pad*2)/L.size;
+  ctx.fillStyle="#2B3343";ctx.fillRect(0,0,W,W);
+  /* cave wall texture */
+  for(let i=0;i<40;i++){const x=(i*97)%W,y=(i*53+i*i*7)%W;ctx.fillStyle=i%2?"#323B4D":"#262D3B";ctx.beginPath();ctx.arc(x,y,W*0.03,0,7);ctx.fill();}
+  for(let y=0;y<L.size;y++)for(let x=0;x<L.size;x++){
+    const v=(x*7+y*13)%3;ctx.fillStyle=["#8D99A6","#96A2AE","#8692A0"][v];
+    ctx.fillRect(pad+x*s,pad+y*s,s,s);
+    ctx.strokeStyle="rgba(40,48,62,.35)";ctx.lineWidth=Math.max(1,s*0.02);ctx.strokeRect(pad+x*s,pad+y*s,s,s);
+  }
+  ctx.strokeStyle="#1D2330";ctx.lineWidth=s*0.08;ctx.strokeRect(pad,pad,s*L.size,s*L.size);
+  L.rocks.forEach(([x,y])=>{const cx=pad+x*s+s/2,cy=pad+y*s+s/2;
+    ctx.fillStyle="#4A5263";ctx.beginPath();ctx.ellipse(cx,cy+s*0.06,s*0.36,s*0.3,0,0,7);ctx.fill();
+    ctx.fillStyle="#5F687B";ctx.beginPath();ctx.ellipse(cx-s*0.06,cy-s*0.02,s*0.24,s*0.18,-0.3,0,7);ctx.fill();});
+  L.gems.forEach(([x,y],i)=>{if(sim.got.has(i))return;const cx=pad+x*s+s/2,cy=pad+y*s+s/2,r=s*0.26;
+    ctx.fillStyle="#8A55E6";ctx.beginPath();ctx.moveTo(cx,cy-r);ctx.lineTo(cx+r*0.9,cy-r*0.3);ctx.lineTo(cx+r*0.6,cy+r*0.8);ctx.lineTo(cx-r*0.6,cy+r*0.8);ctx.lineTo(cx-r*0.9,cy-r*0.3);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#C3A3FF";ctx.beginPath();ctx.moveTo(cx,cy-r);ctx.lineTo(cx+r*0.9,cy-r*0.3);ctx.lineTo(cx,cy);ctx.lineTo(cx-r*0.9,cy-r*0.3);ctx.closePath();ctx.fill();
+    ctx.strokeStyle="#4B2A91";ctx.lineWidth=s*0.03;ctx.beginPath();ctx.moveTo(cx,cy-r);ctx.lineTo(cx+r*0.9,cy-r*0.3);ctx.lineTo(cx+r*0.6,cy+r*0.8);ctx.lineTo(cx-r*0.6,cy+r*0.8);ctx.lineTo(cx-r*0.9,cy-r*0.3);ctx.closePath();ctx.stroke();});
+  /* Laurel */
+  const cx=pad+sim.x*s+s/2,cy=pad+sim.y*s+s/2,r=s*0.3,a=[0,Math.PI/2,Math.PI,-Math.PI/2][sim.d];
+  if(sim.crash){ctx.strokeStyle="#F06B5E";ctx.lineWidth=s*0.06;ctx.beginPath();ctx.arc(cx,cy,r*1.35,0,7);ctx.stroke();}
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(a);
+  ctx.fillStyle="#F2AE2E";ctx.beginPath();ctx.moveTo(r*1.45,0);ctx.lineTo(r*0.95,-r*0.45);ctx.lineTo(r*0.95,r*0.45);ctx.closePath();ctx.fill();
+  ctx.restore();
+  ctx.fillStyle="#E4572E";roundRect(cx-r,cy-r*0.2,r*2,r*1.15,r*0.4);ctx.fill();
+  ctx.fillStyle="#F6C9A0";ctx.beginPath();ctx.arc(cx,cy-r*0.25,r*0.72,0,7);ctx.fill();
+  ctx.fillStyle="#2D5BD6";ctx.beginPath();ctx.arc(cx,cy-r*0.45,r*0.74,Math.PI*1.05,Math.PI*1.95);ctx.fill();
+  const ex=Math.cos(a)*r*0.3,ey=Math.sin(a)*r*0.25;
+  ctx.fillStyle="#1C2433";ctx.beginPath();ctx.arc(cx+ex-r*0.2,cy-r*0.2+ey,r*0.09,0,7);ctx.arc(cx+ex+r*0.2,cy-r*0.2+ey,r*0.09,0,7);ctx.fill();
+  /* gem counter */
+  ctx.fillStyle="rgba(20,26,36,.75)";roundRect(W-pad-s*1.6,pad*0.12,s*1.6,pad*0.76,pad*0.2);ctx.fill();
+  ctx.fillStyle="#fff";ctx.font="800 "+Math.round(pad*0.5)+"px Nunito, sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText("Gems "+sim.got.size+" / "+L.gems.length,W-pad-s*0.8,pad*0.5);
+}
+
+/* checklist memory */
+document.querySelectorAll("#check input").forEach(cb=>{
+  try{cb.checked=localStorage.getItem("tcp-"+cb.id)==="1";}catch(e){}
+  cb.onchange=()=>{try{localStorage.setItem("tcp-"+cb.id,cb.checked?"1":"0");}catch(e){}};
+});
+
+window.addEventListener("resize",fitCanvas);
+renderLevels();loadLevel();fitCanvas();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
+})();
+</script>
+
+</body>
+</html>
